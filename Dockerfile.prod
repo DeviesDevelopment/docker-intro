@@ -1,0 +1,26 @@
+# The base image tagged as `build`
+FROM node:18.2.0-alpine3.14 as build
+
+# Set working directory
+WORKDIR /app
+
+# Add `/app/node_modules/.bin` to $PATH
+ENV PATH /app/node_modules/.bin:$PATH
+
+# copy package.json to work directory && install dependencies
+COPY package.json ./
+COPY package-lock.json ./
+RUN npm install react-scripts@5.0.1 -g --silent &\
+    npm ci --silent
+    
+COPY . ./
+RUN npm run build
+
+# production environment
+# spa (single-page-app) is a fork of nginx that handles routing; redirects non-root paths to react-router
+FROM #steebchen/nginx-spa:stable
+# copy the static build files from build-stage into nginx
+COPY --from=build /app/build /app
+# 
+EXPOSE 80
+CMD ["nginx"]
